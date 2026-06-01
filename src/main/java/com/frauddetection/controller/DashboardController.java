@@ -5,6 +5,12 @@ import com.frauddetection.model.Transaction;
 import com.frauddetection.repository.FraudAlertRepository;
 import com.frauddetection.repository.TransactionRepository;
 import com.frauddetection.repository.UserRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,6 +27,8 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin/dashboard")
+@Tag(name = "Dashboard", description = "Admin monitoring dashboard endpoints - Real-time fraud statistics and analytics")
+@SecurityRequirement(name = "Bearer Authentication")
 public class DashboardController {
 
     private final TransactionRepository transactionRepository;
@@ -36,6 +44,14 @@ public class DashboardController {
     }
 
     @GetMapping
+    @Operation(summary = "Get Admin Dashboard", description = "Retrieve comprehensive fraud detection system statistics and analytics for the admin dashboard. "
+            +
+            "Includes transaction overview, fraud alerts summary, risk distribution, trends over time, " +
+            "and recent high-risk transactions and alerts. Perfect for real-time monitoring and decision making.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Dashboard data retrieved successfully", content = @Content(mediaType = "application/json")),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json"))
+    })
     public ResponseEntity<Map<String, Object>> getDashboard() {
         List<Transaction> transactions = transactionRepository.findAll();
         List<FraudAlert> alerts = fraudAlertRepository.findAll();

@@ -5,6 +5,12 @@ import com.frauddetection.model.User;
 import com.frauddetection.security.JwtService;
 import com.frauddetection.service.UserService;
 // Lombok annotations removed
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,6 +31,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "Authentication", description = "User authentication endpoints - Login and registration with JWT token generation")
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
@@ -38,6 +45,14 @@ public class AuthController {
     }
 
     @PostMapping("/login")
+    @Operation(summary = "User Login", description = "Authenticate a user with username and password. Returns JWT Bearer token for authenticated requests. "
+            +
+            "Optional location parameter helps track user login locations.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Login successful - JWT token provided", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\":\"Login successful\",\"username\":\"user123\",\"email\":\"user@example.com\",\"token\":\"eyJhbGc...\",\"tokenType\":\"Bearer\",\"expiresIn\":86400000}"))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid credentials or account locked", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\":\"Invalid username or password\"}"))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\":\"An error occurred during login\"}")))
+    })
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
         try {
             Optional<User> userOpt = userService.findByUsername(loginRequest.getUsername());
@@ -75,7 +90,8 @@ public class AuthController {
             response.put("message", "Login successful");
             response.put("username", user.getUsername());
             response.put("email", user.getEmail());
-            response.put("token", jwtService.generateToken((org.springframework.security.core.userdetails.UserDetails) authentication.getPrincipal()));
+            response.put("token", jwtService.generateToken(
+                    (org.springframework.security.core.userdetails.UserDetails) authentication.getPrincipal()));
             response.put("tokenType", "Bearer");
             response.put("expiresIn", jwtService.getExpirationMillis());
 
@@ -102,6 +118,14 @@ public class AuthController {
     }
 
     @PostMapping("/register")
+    @Operation(summary = "User Registration", description = "Register a new user account with username, password, email, and optional profile information. "
+            +
+            "Initial location parameter helps establish known login locations.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "User registered successfully", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\":\"User registered successfully\",\"username\":\"user123\",\"email\":\"user@example.com\"}"))),
+            @ApiResponse(responseCode = "400", description = "Bad request - Username or email already taken", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\":\"Username is already taken\"}"))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\":\"An error occurred during registration\"}")))
+    })
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest registerRequest) {
         try {
             // Check if username is available

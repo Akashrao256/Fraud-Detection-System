@@ -7,6 +7,13 @@ import com.frauddetection.service.MLFraudDetectionService;
 import com.frauddetection.service.TransactionService;
 import com.frauddetection.service.UserService;
 // Lombok annotations removed
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +28,8 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/transactions")
+@Tag(name = "Transactions", description = "Transaction processing and management endpoints - Create, retrieve, and manage financial transactions with fraud detection")
+@SecurityRequirement(name = "Bearer Authentication")
 public class TransactionController {
 
     private final TransactionService transactionService;
@@ -36,6 +45,14 @@ public class TransactionController {
     }
 
     @PostMapping
+    @Operation(summary = "Create and Process Transaction", description = "Submit a new financial transaction for processing. The transaction undergoes fraud detection analysis including "
+            +
+            "risk scoring, rule-based flagging, and ML-assisted fraud detection. Returns transaction details with fraud assessment results.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Transaction processed successfully", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"transactionId\":123,\"status\":\"COMPLETED\",\"amount\":1000.00,\"riskScore\":25.5,\"riskLevel\":\"MEDIUM\",\"flagged\":false}"))),
+            @ApiResponse(responseCode = "400", description = "Bad request - User not found or invalid request", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\":\"User not found\"}"))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\":\"An error occurred while processing the transaction\"}")))
+    })
     public ResponseEntity<?> createTransaction(@Valid @RequestBody TransactionRequest request) {
         try {
             Optional<User> userOpt = userService.findByUsername(request.getUsername());
@@ -93,6 +110,12 @@ public class TransactionController {
     // OTP verification endpoint removed as per requirement
 
     @GetMapping("/user/{username}")
+    @Operation(summary = "Get User Transactions", description = "Retrieve all transactions for a specific user. Returns a list of transactions including status, amounts, and fraud detection results.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Transactions retrieved successfully", content = @Content(mediaType = "application/json")),
+            @ApiResponse(responseCode = "400", description = "Bad request - User not found", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\":\"User not found\"}"))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json"))
+    })
     public ResponseEntity<?> getUserTransactions(@PathVariable String username) {
         try {
             Optional<User> userOpt = userService.findByUsername(username);
@@ -113,6 +136,12 @@ public class TransactionController {
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Get Transaction by ID", description = "Retrieve details of a specific transaction by its ID. Returns complete transaction information including risk assessment.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Transaction retrieved successfully", content = @Content(mediaType = "application/json")),
+            @ApiResponse(responseCode = "404", description = "Transaction not found", content = @Content(mediaType = "application/json")),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json"))
+    })
     public ResponseEntity<?> getTransaction(@PathVariable Long id) {
         try {
             Optional<Transaction> transactionOpt = transactionService.getTransactionById(id);
@@ -129,6 +158,13 @@ public class TransactionController {
     }
 
     @GetMapping("/flagged")
+    @Operation(summary = "Get Flagged Transactions", description = "Retrieve all transactions that have been flagged as suspicious or high-risk by the fraud detection system. "
+            +
+            "Useful for monitoring and investigation purposes.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Flagged transactions retrieved successfully", content = @Content(mediaType = "application/json")),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json"))
+    })
     public ResponseEntity<?> getFlaggedTransactions() {
         try {
             List<Transaction> flaggedTransactions = transactionService.getFlaggedTransactions();
