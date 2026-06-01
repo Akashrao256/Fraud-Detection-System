@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Detection Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .form-container, .transactions {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .form-container h2, .transactions h2 {
+            color: #3498db;
+            margin-top: 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        button, .link-button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        button:hover, .link-button:hover {
+            background-color: #2980b9;
+        }
+
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        tr:hover {
+            background-color: #f5f7fa;
+        }
+
+        #message {
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .warning-message {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+
+        .flagged {
+            background-color: #fff3cd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Fraud Detection Dashboard</h1>
+
+        <div class="top-bar">
+            <span id="welcomeUser"></span>
+            <div>
+                <a class="link-button" href="admin.html">Admin Alerts</a>
+                <button type="button" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <div class="form-container">
+            <h2>Submit a Transaction</h2>
+
+            <div id="message" style="display: none;"></div>
+
+            <form id="transactionForm">
+                <label for="userId">User ID:</label>
+                <input type="text" id="userId" placeholder="User ID" readonly required>
+
+                <label for="amount">Amount:</label>
+                <input type="number" id="amount" placeholder="Amount" step="0.01" required>
+
+                <label for="location">Location:</label>
+                <input type="text" id="location" placeholder="Transaction Location" required>
+
+                <label for="transactionType">Transaction Type:</label>
+                <select id="transactionType">
+                    <option value="PURCHASE">Purchase</option>
+                    <option value="WITHDRAWAL">Withdrawal</option>
+                    <option value="TRANSFER">Transfer</option>
+                    <option value="DEPOSIT">Deposit</option>
+                </select>
+
+                <label for="recipientAccount">Recipient Account:</label>
+                <input type="text" id="recipientAccount" placeholder="Recipient Account">
+
+                <button type="submit" id="submitButton">Submit Transaction</button>
+            </form>
+        </div>
+
+        <div class="transactions">
+            <h2>Transaction History</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>User ID</th>
+                        <th>Amount</th>
+                        <th>Type</th>
+                        <th>Location</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Risk</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody id="transactionTableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="transactions">
+            <h2>Fraud Alerts</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                        <th>Date</th>
+                        <th>Resolved</th>
+                    </tr>
+                </thead>
+                <tbody id="alertsTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+    const API_BASE_URL = '/api';
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const token = localStorage.getItem('token');
+        const username = localStorage.getItem('username');
+
+        if (!token || !username) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        document.getElementById('userId').value = username;
+        document.getElementById('welcomeUser').textContent = `Logged in as ${username}`;
+        document.getElementById('transactionForm').addEventListener('submit', submitTransaction);
+
+        showMessage('Ready to process backend transactions', 'success-message');
+        loadTransactions();
+        loadFraudAlerts();
+    });
+
+    function authHeaders() {
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        };
+    }
+
+    async function apiFetch(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                ...authHeaders(),
+                ...(options.headers || {})
+            }
+        });
+
+        if (response.status === 401 || response.status === 403) {
+            logout();
+            throw new Error('Session expired. Please login again.');
+        }
+
+        const contentType = response.headers.get('content-type') || '';
+        const body = contentType.includes('application/json') ? await response.json() : null;
+
+        if (!response.ok) {
+            throw new Error((body && body.error) || 'Request failed');
+        }
+
+        return body;
+    }
+
+    async function submitTransaction(event) {
+        event.preventDefault();
+        const submitButton = document.getElementById('submitButton');
+        submitButton.disabled = true;
+
+        const request = {
+            username: document.getElementById('userId').value,
+            amount: document.getElementById('amount').value,
+            location: document.getElementById('location').value,
+            transactionType: document.getElementById('transactionType').value,
+            recipientAccount: document.getElementById('recipientAccount').value,
+            description: 'Submitted from dashboard'
+        };
+
+        try {
+            const result = await apiFetch(`${API_BASE_URL}/transactions`, {
+                method: 'POST',
+                body: JSON.stringify(request)
+            });
+
+            if (result.flagged) {
+                showMessage(`${result.message} Risk: ${result.riskLevel} (${result.riskScore}/100). Reason: ${result.flagReason}`, 'warning-message');
+            } else {
+                showMessage(`${result.message} Risk: ${result.riskLevel} (${result.riskScore}/100).`, 'success-message');
+            }
+
+            document.getElementById('transactionForm').reset();
+            document.getElementById('userId').value = localStorage.getItem('username');
+            await loadTransactions();
+            await loadFraudAlerts();
+        } catch (error) {
+            showMessage(error.message, 'error-message');
+        } finally {
+            submitButton.disabled = false;
+        }
+    }
+
+    async function loadTransactions() {
+        const username = localStorage.getItem('username');
+        const transactions = await apiFetch(`${API_BASE_URL}/transactions/user/${encodeURIComponent(username)}`);
+        const tableBody = document.getElementById('transactionTableBody');
+        tableBody.innerHTML = '';
+
+        if (!transactions || transactions.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="9">No transactions found</td></tr>';
+            return;
+        }
+
+        transactions.slice().reverse().forEach(transaction => {
+            const row = document.createElement('tr');
+            if (transaction.flagged) {
+                row.className = 'flagged';
+            }
+
+            row.innerHTML = `
+                <td>${transaction.id}</td>
+                <td>${transaction.user.username}</td>
+                <td>${Number(transaction.amount).toFixed(2)}</td>
+                <td>${transaction.transactionType || ''}</td>
+                <td>${transaction.location}</td>
+                <td>${formatDate(transaction.transactionDate)}</td>
+                <td>${transaction.status}</td>
+                <td>${transaction.riskLevel || 'LOW'} (${transaction.riskScore || 0})</td>
+                <td>${transaction.flagReason || ''}</td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+
+    async function loadFraudAlerts() {
+        const username = localStorage.getItem('username');
+        const alerts = await apiFetch(`${API_BASE_URL}/fraud-alerts/user/${encodeURIComponent(username)}`);
+        const tableBody = document.getElementById('alertsTableBody');
+        tableBody.innerHTML = '';
+
+        if (!alerts || alerts.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="5">No fraud alerts found</td></tr>';
+            return;
+        }
+
+        alerts.slice().reverse().forEach(alert => {
+            const row = document.createElement('tr');
+            row.className = alert.resolved ? '' : 'flagged';
+            row.innerHTML = `
+                <td>${alert.id}</td>
+                <td>${alert.alertType}</td>
+                <td>${alert.description || ''}</td>
+                <td>${formatDate(alert.alertDate)}</td>
+                <td>${alert.resolved ? 'Yes' : 'No'}</td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+
+    function formatDate(value) {
+        return value ? new Date(value).toLocaleString() : '';
+    }
+
+    function showMessage(text, className) {
+        const messageElement = document.getElementById('message');
+        messageElement.textContent = text;
+        messageElement.className = className;
+        messageElement.style.display = 'block';
+    }
+
+    function logout() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('tokenType');
+        localStorage.removeItem('username');
+        localStorage.removeItem('email');
+        window.location.href = 'login.html';
+    }
+    </script>
+</body>
+</html>

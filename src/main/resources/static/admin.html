@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Monitoring Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #f4f6f8;
+            --panel: #ffffff;
+            --ink: #17212b;
+            --muted: #667085;
+            --line: #d9e1ea;
+            --accent: #1f7a8c;
+            --accent-dark: #155e6c;
+            --danger: #c7362f;
+            --danger-soft: #fde8e7;
+            --warning: #b7791f;
+            --warning-soft: #fff3d8;
+            --success: #287a52;
+            --success-soft: #e6f4ee;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .shell {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 30px;
+            letter-spacing: 0;
+        }
+
+        .subtle {
+            color: var(--muted);
+            margin-top: 6px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        button,
+        .link-button {
+            border: 0;
+            background: var(--accent);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 40px;
+        }
+
+        button:hover,
+        .link-button:hover {
+            background: var(--accent-dark);
+        }
+
+        button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .ghost {
+            background: #eef3f6;
+            color: var(--ink);
+        }
+
+        .ghost:hover {
+            background: #dfe8ed;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(150px, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+
+        .stat-card,
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+        }
+
+        .stat-card {
+            padding: 16px;
+        }
+
+        .stat-label {
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 750;
+        }
+
+        .charts {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .panel {
+            padding: 18px;
+            min-width: 0;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        h2 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .chart-wrap {
+            height: 280px;
+        }
+
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        label {
+            display: block;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        select {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 10px;
+            background: #fff;
+            font-size: 14px;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 980px;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--line);
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        th {
+            color: var(--muted);
+            background: #f8fafc;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        tr.unresolved {
+            background: #fffaf2;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 72px;
+            padding: 5px 9px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 750;
+        }
+
+        .risk-high {
+            background: var(--danger-soft);
+            color: var(--danger);
+        }
+
+        .risk-medium {
+            background: var(--warning-soft);
+            color: var(--warning);
+        }
+
+        .risk-low {
+            background: var(--success-soft);
+            color: var(--success);
+        }
+
+        .status-open {
+            color: var(--danger);
+            font-weight: 700;
+        }
+
+        .status-reviewed {
+            color: var(--success);
+            font-weight: 700;
+        }
+
+        .message {
+            display: none;
+            padding: 12px 14px;
+            margin-bottom: 16px;
+            border-radius: 6px;
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--ink);
+        }
+
+        .message.error {
+            display: block;
+            border-color: #f0b4b0;
+            background: var(--danger-soft);
+            color: var(--danger);
+        }
+
+        .message.info {
+            display: block;
+            border-color: #b9dbe3;
+            background: #e8f5f7;
+            color: var(--accent-dark);
+        }
+
+        .empty {
+            text-align: center;
+            color: var(--muted);
+            padding: 22px;
+        }
+
+        @media (max-width: 1100px) {
+            .stats {
+                grid-template-columns: repeat(3, minmax(150px, 1fr));
+            }
+        }
+
+        @media (max-width: 800px) {
+            .shell {
+                padding: 16px;
+            }
+
+            .topbar,
+            .panel-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .actions {
+                justify-content: flex-start;
+            }
+
+            .stats,
+            .charts,
+            .filters {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <div class="topbar">
+            <div>
+                <h1>Fraud Monitoring</h1>
+                <div class="subtle" id="sessionLabel">Backend analytics dashboard</div>
+            </div>
+            <div class="actions">
+                <button type="button" onclick="loadDashboard()">Refresh</button>
+                <a class="link-button ghost" href="index.html">Transactions</a>
+                <button class="ghost" type="button" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <div id="message" class="message"></div>
+
+        <section class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Total Transactions</div>
+                <div class="stat-value" id="totalTransactions">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Flagged Transactions</div>
+                <div class="stat-value" id="totalFlaggedTransactions">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Fraud Percentage</div>
+                <div class="stat-value" id="fraudPercentage">0%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Users</div>
+                <div class="stat-value" id="totalUsers">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">High Risk</div>
+                <div class="stat-value" id="highRiskTransactions">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Open Alerts</div>
+                <div class="stat-value" id="recentFraudAlerts">0</div>
+            </div>
+        </section>
+
+        <section class="charts">
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>Transactions Over Time</h2>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="transactionsChart"></canvas>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>Fraud Alerts Over Time</h2>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="alertsChart"></canvas>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>Fraud vs Safe</h2>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="fraudSafeChart"></canvas>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>Risk Distribution</h2>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="riskChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Fraud Alerts</h2>
+                <span class="subtle" id="alertCount">0 alerts</span>
+            </div>
+
+            <div class="filters">
+                <div>
+                    <label for="statusFilter">Status</label>
+                    <select id="statusFilter">
+                        <option value="all">All</option>
+                        <option value="open">Open</option>
+                        <option value="reviewed">Reviewed</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="riskFilter">Risk</label>
+                    <select id="riskFilter">
+                        <option value="all">All</option>
+                        <option value="HIGH">High</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="LOW">Low</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="sortFilter">Sort</label>
+                    <select id="sortFilter">
+                        <option value="newest">Newest</option>
+                        <option value="risk-desc">Risk high to low</option>
+                        <option value="risk-asc">Risk low to high</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>User</th>
+                            <th>Transaction</th>
+                            <th>Amount</th>
+                            <th>Type</th>
+                            <th>Risk</th>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="alertsTableBody">
+                        <tr><td colspan="10" class="empty">Loading dashboard...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    const API_BASE_URL = '/api';
+    const charts = {};
+    let allAlerts = [];
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const token = localStorage.getItem('token');
+        const username = localStorage.getItem('username');
+
+        if (!token || !username) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        document.getElementById('sessionLabel').textContent = `Signed in as ${username}`;
+        document.getElementById('statusFilter').addEventListener('change', renderAlerts);
+        document.getElementById('riskFilter').addEventListener('change', renderAlerts);
+        document.getElementById('sortFilter').addEventListener('change', renderAlerts);
+
+        loadDashboard();
+    });
+
+    function authHeaders() {
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        };
+    }
+
+    async function apiFetch(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                ...authHeaders(),
+                ...(options.headers || {})
+            }
+        });
+
+        if (response.status === 401 || response.status === 403) {
+            logout();
+            throw new Error('Session expired. Please login again.');
+        }
+
+        const contentType = response.headers.get('content-type') || '';
+        const body = contentType.includes('application/json') ? await response.json() : null;
+
+        if (!response.ok) {
+            throw new Error((body && body.error) || 'Request failed');
+        }
+
+        return body;
+    }
+
+    async function loadDashboard() {
+        showMessage('Loading dashboard data...', 'info');
+        setTableLoading();
+
+        try {
+            const dashboard = await apiFetch(`${API_BASE_URL}/admin/dashboard`);
+            allAlerts = await apiFetch(`${API_BASE_URL}/fraud-alerts`);
+            renderSummary(dashboard.summary || {});
+            renderCharts(dashboard);
+            renderAlerts();
+            clearMessage();
+        } catch (error) {
+            showMessage(error.message, 'error');
+        }
+    }
+
+    function renderSummary(summary) {
+        document.getElementById('totalTransactions').textContent = summary.totalTransactions || 0;
+        document.getElementById('totalFlaggedTransactions').textContent = summary.totalFlaggedTransactions || 0;
+        document.getElementById('fraudPercentage').textContent = `${summary.fraudPercentage || 0}%`;
+        document.getElementById('totalUsers').textContent = summary.totalUsers || 0;
+        document.getElementById('highRiskTransactions').textContent = summary.highRiskTransactions || 0;
+        document.getElementById('recentFraudAlerts').textContent = summary.recentFraudAlerts || 0;
+    }
+
+    function renderCharts(dashboard) {
+        renderLineChart('transactionsChart', 'Transactions', dashboard.transactionsOverTime || [], '#1f7a8c');
+        renderLineChart('alertsChart', 'Alerts', dashboard.fraudAlertsOverTime || [], '#c7362f');
+        renderDoughnutChart('fraudSafeChart', ['Fraud', 'Safe'], [
+            dashboard.fraudVsSafe ? dashboard.fraudVsSafe.fraud : 0,
+            dashboard.fraudVsSafe ? dashboard.fraudVsSafe.safe : 0
+        ], ['#c7362f', '#287a52']);
+        renderBarChart('riskChart', dashboard.riskDistribution || {});
+    }
+
+    function renderLineChart(id, label, series, color) {
+        replaceChart(id, {
+            type: 'line',
+            data: {
+                labels: series.map(item => item.date),
+                datasets: [{
+                    label,
+                    data: series.map(item => item.count),
+                    borderColor: color,
+                    backgroundColor: `${color}22`,
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: chartOptions()
+        });
+    }
+
+    function renderDoughnutChart(id, labels, data, colors) {
+        replaceChart(id, {
+            type: 'doughnut',
+            data: {
+                labels,
+                datasets: [{
+                    data,
+                    backgroundColor: colors
+                }]
+            },
+            options: chartOptions()
+        });
+    }
+
+    function renderBarChart(id, distribution) {
+        replaceChart(id, {
+            type: 'bar',
+            data: {
+                labels: ['LOW', 'MEDIUM', 'HIGH'],
+                datasets: [{
+                    label: 'Transactions',
+                    data: [
+                        distribution.LOW || 0,
+                        distribution.MEDIUM || 0,
+                        distribution.HIGH || 0
+                    ],
+                    backgroundColor: ['#287a52', '#b7791f', '#c7362f']
+                }]
+            },
+            options: chartOptions()
+        });
+    }
+
+    function replaceChart(id, config) {
+        if (charts[id]) {
+            charts[id].destroy();
+        }
+        charts[id] = new Chart(document.getElementById(id), config);
+    }
+
+    function chartOptions() {
+        return {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        boxWidth: 14
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        };
+    }
+
+    function renderAlerts() {
+        const statusFilter = document.getElementById('statusFilter').value;
+        const riskFilter = document.getElementById('riskFilter').value;
+        const sortFilter = document.getElementById('sortFilter').value;
+        const tableBody = document.getElementById('alertsTableBody');
+
+        let alerts = allAlerts.slice();
+
+        if (statusFilter === 'open') {
+            alerts = alerts.filter(alert => !alert.resolved);
+        } else if (statusFilter === 'reviewed') {
+            alerts = alerts.filter(alert => alert.resolved);
+        }
+
+        if (riskFilter !== 'all') {
+            alerts = alerts.filter(alert => getRiskLevel(alert) === riskFilter);
+        }
+
+        alerts.sort((left, right) => {
+            if (sortFilter === 'risk-desc') {
+                return getRiskScore(right) - getRiskScore(left);
+            }
+            if (sortFilter === 'risk-asc') {
+                return getRiskScore(left) - getRiskScore(right);
+            }
+            return new Date(right.alertDate || 0) - new Date(left.alertDate || 0);
+        });
+
+        document.getElementById('alertCount').textContent = `${alerts.length} alerts`;
+        tableBody.innerHTML = '';
+
+        if (alerts.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="10" class="empty">No alerts match the selected filters</td></tr>';
+            return;
+        }
+
+        alerts.forEach(alert => {
+            const transaction = alert.transaction || {};
+            const user = alert.user || {};
+            const row = document.createElement('tr');
+            row.className = alert.resolved ? '' : 'unresolved';
+
+            row.innerHTML = `
+                <td>${alert.id}</td>
+                <td>${user.username || ''}</td>
+                <td>${transaction.id || ''}</td>
+                <td>${transaction.amount ? Number(transaction.amount).toFixed(2) : ''}</td>
+                <td>${alert.alertType || ''}</td>
+                <td>${riskBadge(getRiskLevel(alert), getRiskScore(alert))}</td>
+                <td>${formatDate(alert.alertDate)}</td>
+                <td>${alert.description || transaction.flagReason || ''}</td>
+                <td class="${alert.resolved ? 'status-reviewed' : 'status-open'}">${alert.resolved ? 'Reviewed' : 'Open'}</td>
+                <td>${alert.resolved ? '' : `<button type="button" onclick="markReviewed(${alert.id})">Mark reviewed</button>`}</td>
+            `;
+
+            tableBody.appendChild(row);
+        });
+    }
+
+    async function markReviewed(alertId) {
+        try {
+            await apiFetch(`${API_BASE_URL}/fraud-alerts/${alertId}/resolve`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    resolvedBy: localStorage.getItem('username') || 'admin',
+                    actionTaken: 'Reviewed in fraud monitoring dashboard'
+                })
+            });
+            await loadDashboard();
+        } catch (error) {
+            showMessage(error.message, 'error');
+        }
+    }
+
+    function getRiskScore(alert) {
+        return alert.transaction ? (alert.transaction.riskScore || 0) : 0;
+    }
+
+    function getRiskLevel(alert) {
+        return alert.transaction && alert.transaction.riskLevel ? alert.transaction.riskLevel : 'LOW';
+    }
+
+    function riskBadge(level, score) {
+        const normalized = (level || 'LOW').toLowerCase();
+        return `<span class="badge risk-${normalized}">${level || 'LOW'} ${score || 0}</span>`;
+    }
+
+    function setTableLoading() {
+        document.getElementById('alertsTableBody').innerHTML =
+            '<tr><td colspan="10" class="empty">Loading alerts...</td></tr>';
+    }
+
+    function showMessage(text, type) {
+        const message = document.getElementById('message');
+        message.textContent = text;
+        message.className = `message ${type}`;
+    }
+
+    function clearMessage() {
+        const message = document.getElementById('message');
+        message.textContent = '';
+        message.className = 'message';
+    }
+
+    function formatDate(value) {
+        return value ? new Date(value).toLocaleString() : '';
+    }
+
+    function logout() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('tokenType');
+        localStorage.removeItem('username');
+        localStorage.removeItem('email');
+        window.location.href = 'login.html';
+    }
+    </script>
+</body>
+</html>
