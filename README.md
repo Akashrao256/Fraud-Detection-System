@@ -1,4 +1,4 @@
-Fraud Detection & Risk Monitoring Platform
+## Fraud Detection & Risk Monitoring Platform
 
 A secure, enterprise-style fraud detection and transaction monitoring platform built using Java, Spring Boot, PostgreSQL, JWT Authentication, Docker, and Machine Learning.
 
